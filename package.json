@@ -1,0 +1,9 @@
+{
+  "name": "belgian-utils",
+  "version": "0.1.0",
+  "description": "Open source JavaScript utilities for Belgian business identifiers, files and administrative formats.",
+  "type": "module",
+  "scripts": { "test": "node --test" },
+  "keywords": ["belgium", "coda", "camt", "peppol", "ubl", "intervat", "xbrl", "iban", "vat", "kbo", "bce"],
+  "license": "MIT"
+}
