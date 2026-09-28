@@ -61,7 +61,7 @@ function exifFields(tiff) {
       else if (tag === 0x8825) gpsPtr = u32(p + 8);
       else if (tags[tag]) {
         const v = ascii(type, count, p + 8);
-        if (v) out.push(field(...tags[tag], v));
+        if (v) { const [group, key, label, privacy] = tags[tag]; out.push(field(group, key, label, v, privacy)); }
       }
     }
   };
@@ -154,7 +154,7 @@ function webp(bytes) {
     const end = p + 8 + len + (len & 1);
     if (end > bytes.length) break;
     const data = bytes.subarray(p + 8, p + 8 + len);
-    if (type === 'EXIF') { blocks.push('EXIF'); fields.push(...exifFields(data)); }
+    if (type === 'EXIF') { blocks.push('EXIF'); const tiff = latin.decode(data.subarray(0,6)) === 'Exif\0\0' ? data.subarray(6) : data; fields.push(...exifFields(tiff)); }
     else if (type === 'XMP ') { blocks.push('XMP'); fields.push(field('xmp','raw','XMP packet',dec.decode(data).slice(0,500),'medium')); }
     else { if (type === 'ICCP') blocks.push('ICC colour profile'); chunks.push(bytes.subarray(p, end)); }
     p = end;
@@ -268,7 +268,6 @@ async function ooxml(bytes, name) {
   const clean = async () => {
     const cleaned = [];
     for (const f of files) {
-      if (f.name === 'docProps/custom.xml') continue;
       let data = f.data;
       if (f.name === 'docProps/core.xml') {
         let x = dec.decode(data);
@@ -277,6 +276,10 @@ async function ooxml(bytes, name) {
       } else if (f.name === 'docProps/app.xml') {
         let x = dec.decode(data);
         for (const k of ['Company','Manager','TotalTime']) x = removeTag(x,k);
+        data = enc.encode(x);
+      } else if (f.name === 'docProps/custom.xml') {
+        let x = dec.decode(data);
+        x = x.replace(/\s*<property\b[\s\S]*?<\/property>\s*/gi, '\n');
         data = enc.encode(x);
       }
       cleaned.push({name:f.name,data});
