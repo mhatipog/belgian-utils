@@ -14,11 +14,11 @@ import { isIntervat, INTERVAT_KINDS } from './intervat.js';
 
 const SIGNATURES = [
   { bytes: [0x25, 0x50, 0x44, 0x46], kind: 'pdf', label: 'PDF document' },
-  { bytes: [0x89, 0x50, 0x4e, 0x47], kind: 'image', label: 'PNG image' },
-  { bytes: [0xff, 0xd8, 0xff], kind: 'image', label: 'JPEG image' },
-  { bytes: [0x47, 0x49, 0x46, 0x38], kind: 'image', label: 'GIF image' },
-  { bytes: [0x42, 0x4d], kind: 'image', label: 'BMP image' },
-  { bytes: [0x00, 0x00, 0x01, 0x00], kind: 'image', label: 'ICO icon' },
+  { bytes: [0x89, 0x50, 0x4e, 0x47], kind: 'image', label: 'PNG image', format: 'png' },
+  { bytes: [0xff, 0xd8, 0xff], kind: 'image', label: 'JPEG image', format: 'jpeg' },
+  { bytes: [0x47, 0x49, 0x46, 0x38], kind: 'image', label: 'GIF image', format: 'gif' },
+  { bytes: [0x42, 0x4d], kind: 'image', label: 'BMP image', format: 'bmp' },
+  { bytes: [0x00, 0x00, 0x01, 0x00], kind: 'image', label: 'ICO icon', format: 'ico' },
   { bytes: [0x50, 0x4b, 0x03, 0x04], kind: 'zip', label: 'ZIP archive' },
 ];
 
@@ -28,15 +28,16 @@ const r = (kind, label, family, extra = {}) => ({ kind, format: extra.format || 
 export function detectBytes(head, name = '') {
   // WebP: "RIFF" .... "WEBP"
   if (head[0] === 0x52 && head[1] === 0x49 && head[2] === 0x46 && head[3] === 0x46 && String.fromCharCode(...head.slice(8, 12)) === 'WEBP') {
-    return r('image', 'WebP image', 'image');
+    return r('image', 'WebP image', 'image', { format: 'webp' });
   }
   for (const s of SIGNATURES) {
     if (s.bytes.every((b, i) => head[i] === b)) {
       if (s.kind === 'zip') {
         const office = /\.(xlsx|docx|pptx|odt|ods)$/i.exec(name);
-        return r('zip', office ? `Office document (.${office[1].toLowerCase()})` : 'ZIP archive', 'binary');
+        if (office) return r('office', `Office document (.${office[1].toLowerCase()})`, 'document', { format: office[1].toLowerCase() });
+        return r('zip', 'ZIP archive', 'binary');
       }
-      return r(s.kind, s.label, s.kind === 'pdf' ? 'document' : 'image');
+      return r(s.kind, s.label, s.kind === 'pdf' ? 'document' : 'image', s.format ? { format: s.format } : {});
     }
   }
   // DER certificate: SEQUENCE with a long length, then SEQUENCE (tbsCertificate).
