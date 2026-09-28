@@ -189,7 +189,12 @@ function webp(bytes) {
     const data = bytes.subarray(p + 8, p + 8 + len);
     if (type === 'EXIF') { blocks.push('EXIF'); const tiff = latin.decode(data.subarray(0,6)) === 'Exif\0\0' ? data.subarray(6) : data; fields.push(...exifFields(tiff)); }
     else if (type === 'XMP ') { blocks.push('XMP'); fields.push(field('xmp','raw','XMP packet',dec.decode(data).slice(0,500),'medium')); }
-    else { if (type === 'ICCP') blocks.push('ICC colour profile'); chunks.push(bytes.subarray(p, end)); }
+    else {
+      if (type === 'ICCP') blocks.push('ICC colour profile');
+      const chunk = bytes.slice(p, end);
+      if (type === 'VP8X' && chunk.length > 8) chunk[8] &= ~0x0c; // EXIF + XMP feature flags
+      chunks.push(chunk);
+    }
     p = end;
   }
   const clean = () => {
