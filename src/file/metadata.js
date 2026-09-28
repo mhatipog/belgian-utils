@@ -91,6 +91,35 @@ function exifFields(tiff) {
   return out.filter(Boolean);
 }
 
+function exifOrientation(tiff) {
+  if (tiff.length < 8) return 1;
+  const little = latin.decode(tiff.subarray(0,2)) === 'II';
+  const u16 = (p) => little ? u16le(tiff,p) : u16be(tiff,p);
+  const u32 = (p) => little ? u32le(tiff,p) : ((tiff[p]<<24)|(tiff[p+1]<<16)|(tiff[p+2]<<8)|tiff[p+3])>>>0;
+  if (u16(2) !== 42) return 1;
+  const off = u32(4);
+  if (!off || off + 2 > tiff.length) return 1;
+  const n = u16(off);
+  for (let i=0;i<n;i++) {
+    const p=off+2+i*12;
+    if (p+12>tiff.length) break;
+    if (u16(p)===0x0112 && u16(p+2)===3 && u32(p+4)===1) return u16(p+8) || 1;
+  }
+  return 1;
+}
+
+function orientationExifSegment(value) {
+  if (!(value >= 2 && value <= 8)) return null;
+  const payload = new Uint8Array(32);
+  payload.set(enc.encode('Exif\0\0'),0);
+  const v = new DataView(payload.buffer);
+  payload[6]=0x49; payload[7]=0x49; v.setUint16(8,42,true); v.setUint32(10,8,true);
+  v.setUint16(14,1,true); v.setUint16(16,0x0112,true); v.setUint16(18,3,true); v.setUint32(20,1,true); v.setUint16(24,value,true); v.setUint32(28,0,true);
+  const seg = new Uint8Array(36);
+  seg.set([0xff,0xe1,0,34],0); seg.set(payload,4);
+  return seg;
+}
+
 function jpeg(bytes) {
   const fields = [], blocks = [], keep = [bytes.subarray(0, 2)];
   let p = 2;
@@ -101,9 +130,12 @@ function jpeg(bytes) {
     if (len < 2 || p + 2 + len > bytes.length) break;
     const seg = bytes.subarray(p, p + 2 + len);
     const body = bytes.subarray(p + 4, p + 2 + len);
-    let removable = false;
+    let removable = false, replacement = null;
     if (marker === 0xe1 && latin.decode(body.subarray(0, 6)) === 'Exif\0\0') {
-      blocks.push('EXIF'); removable = true; fields.push(...exifFields(body.subarray(6)));
+      blocks.push('EXIF'); removable = true;
+      const tiff = body.subarray(6);
+      fields.push(...exifFields(tiff));
+      replacement = orientationExifSegment(exifOrientation(tiff));
     } else if (marker === 0xe1 && latin.decode(body.subarray(0, 29)).includes('ns.adobe.com/xap')) {
       blocks.push('XMP'); removable = true;
       const s = dec.decode(body);
@@ -116,6 +148,7 @@ function jpeg(bytes) {
     else if (marker === 0xfe) { blocks.push('Comment'); removable = true; fields.push(field('other', 'comment', 'Comment', latin.decode(body), 'medium')); }
     else if (marker === 0xe2 && latin.decode(body.subarray(0, 11)) === 'ICC_PROFILE') blocks.push('ICC colour profile');
     if (!removable) keep.push(seg);
+    else if (replacement) keep.push(replacement);
     p += 2 + len;
   }
   return { format: 'jpeg', fields: fields.filter(Boolean), blocks, clean: () => concat(keep) };
