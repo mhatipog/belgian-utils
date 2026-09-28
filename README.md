@@ -1,6 +1,6 @@
 # belgian-utils
 
-Open source JavaScript utilities for Belgian business identifiers, files and administrative formats.
+Open source JavaScript utilities behind gratistools.be, focused on Belgian business formats and privacy-first local file processing.
 
 This package contains the reusable local processing logic behind parts of [gratistools.be](https://gratistools.be/). The website itself, account features, analytics, deployment configuration and operational code are intentionally not part of this repository.
 
@@ -22,6 +22,7 @@ This package contains the reusable local processing logic behind parts of [grati
 - EPC payment QR payload generation
 - Lambert 72 and Lambert 2008 conversion
 - Shared safe XML and CSV helpers
+- Local metadata inspection and privacy cleaning for JPEG, PNG, WebP, DOCX, XLSX and PPTX
 
 ## Privacy
 
