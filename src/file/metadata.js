@@ -280,6 +280,17 @@ async function ooxml(bytes, name) {
   const isWord = map.has('word/document.xml'), isExcel = map.has('xl/workbook.xml'), isPpt = map.has('ppt/presentation.xml');
   const format = isWord ? 'docx' : isExcel ? 'xlsx' : isPpt ? 'pptx' : 'ooxml';
   const fields = [], blocks = [];
+  const names = files.map((f) => f.name);
+  const workbookXml = isExcel ? dec.decode(map.get('xl/workbook.xml')?.data || new Uint8Array()) : '';
+  const wordXml = isWord ? dec.decode(map.get('word/document.xml')?.data || new Uint8Array()) : '';
+  const signals = {
+    officeComments: names.filter((n) => /(^|\/)(comments|commentAuthors|threadedComments)(\d*)?\.xml$/i.test(n)).length,
+    trackedChanges: isWord && /<w:(ins|del|moveFrom|moveTo)\b/i.test(wordXml),
+    hiddenSheets: isExcel ? [...workbookXml.matchAll(/<sheet\b[^>]*\bstate=["'](?:hidden|veryHidden)["']/gi)].length : 0,
+    externalLinks: names.some((n) => /(^|\/)externalLinks\//i.test(n)),
+    embeddedObjects: names.some((n) => /(^|\/)(embeddings|oleObject|embeddedFiles)\//i.test(n)),
+    thumbnail: names.some((n) => /(^|\/)docProps\/thumbnail\./i.test(n)),
+  };
   const core = map.get('docProps/core.xml');
   if (core) {
     blocks.push('Core properties'); const x = dec.decode(core.data);
@@ -324,7 +335,7 @@ async function ooxml(bytes, name) {
     }
     return createStoredZip(cleaned);
   };
-  return { format, fields: fields.filter(Boolean), blocks, clean };
+  return { format, fields: fields.filter(Boolean), blocks, signals, clean };
 }
 
 export async function inspectMetadata(input, { name = '' } = {}) {
@@ -341,6 +352,7 @@ export async function inspectMetadata(input, { name = '' } = {}) {
     blocks: r.blocks,
     privacyCount: r.fields.filter(f => f.privacy === 'high' || f.privacy === 'medium').length,
     capabilities: { clean: true, edit: false },
+    signals: r.signals || {},
     _clean: r.clean,
   };
 }

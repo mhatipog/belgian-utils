@@ -6,7 +6,7 @@ import {
   parseCoda, parseCamt, readUbl, validateInvoice,
   parseIntervat, parseXbrl, epcPayload,
   wgs84ToLambert72, lambert72ToWgs84,
-  inspectMetadata, cleanMetadata
+  inspectMetadata, cleanMetadata, interpretMetadata
 } from '../src/index.js';
 import { parseXml } from '../src/xml.js';
 
@@ -100,4 +100,29 @@ test('Office core properties are inspected and privacy-cleaned', async () => {
   const after = await inspectMetadata(cleaned.bytes,{name:'test.docx'});
   assert.equal(after.fields.some((f)=>f.key==='creator'),false);
   assert.equal(after.fields.find((f)=>f.key==='title').value,'Keep me');
+});
+
+
+test('metadata intelligence explains openpyxl and template workflows', () => {
+  const x = interpretMetadata({ fields: [
+    {group:'document',key:'creator',label:'Author',value:'openpyxl',privacy:'high'},
+    {group:'application',key:'Application',label:'Application',value:'Microsoft Excel Compatible / Openpyxl 3.1.5',privacy:'medium'},
+  ], signals:{} });
+  assert.ok(x.insights.some((i)=>i.title.includes('generated programmatically')));
+  assert.ok(x.fields.every((f)=>f.meaning && f.interpretation));
+
+  const p = interpretMetadata({ fields: [
+    {group:'document',key:'title',label:'Title',value:'LACO Word template - graphical front page',privacy:'info'},
+    {group:'software',key:'creator',label:'Creator',value:'Microsoft Word for Microsoft 365',privacy:'medium'},
+    {group:'software',key:'producer',label:'Producer',value:'Microsoft Word for Microsoft 365',privacy:'medium'},
+  ], signals:{} });
+  assert.ok(p.insights.some((i)=>i.title.includes('Reusable Word template')));
+});
+
+test('metadata intelligence surfaces deep document signals', () => {
+  const x = interpretMetadata({ fields:[], signals:{ trackedChanges:true, hiddenSheets:2, embeddedObjects:true, incrementalUpdates:3 } });
+  assert.ok(x.insights.some((i)=>i.title.includes('Tracked changes')));
+  assert.ok(x.insights.some((i)=>i.title.includes('Hidden spreadsheet')));
+  assert.ok(x.insights.some((i)=>i.title.includes('Embedded objects')));
+  assert.ok(x.insights.some((i)=>i.title.includes('PDF revisions')));
 });
