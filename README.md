@@ -22,7 +22,8 @@ This package contains the reusable local processing logic behind parts of [grati
 - EPC payment QR payload generation
 - Lambert 72 and Lambert 2008 conversion
 - Shared safe XML and CSV helpers
-- Local metadata inspection and privacy cleaning for JPEG, PNG, WebP, DOCX, XLSX and PPTX\n- Local PDF page composition: reorder/delete pages, insert pages from another PDF, rotate pages, and add JPG/PNG images as PDF pages
+- Local metadata inspection and privacy cleaning for JPEG, PNG, WebP, DOCX, XLSX and PPTX
+- Local PDF page composition: reorder/delete pages, insert pages from another PDF, rotate pages, and add JPG/PNG images as PDF pages
 
 ## PDF page editing
 
