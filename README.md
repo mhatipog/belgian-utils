@@ -24,6 +24,10 @@ This package contains the reusable local processing logic behind parts of [grati
 - Shared safe XML and CSV helpers
 - Local metadata inspection and privacy cleaning for JPEG, PNG, WebP, DOCX, XLSX and PPTX
 - Local PDF page composition: reorder/delete pages, insert pages from another PDF, rotate pages, and add JPG/PNG images as PDF pages
+- Weighted decision matrices with cost/benefit normalization, dominance detection and weight sensitivity analysis
+- Reproducible simple, systematic and stratified sampling, including finite-population sample-size planning
+- Consensus ranking with Schulze strongest paths, Borda, Copeland, Condorcet checks and pairwise matrices
+- Availability interval merging and duration-aware maximum-attendance meeting-window optimization
 
 ## PDF page editing
 
@@ -49,6 +53,22 @@ const edited = await composePdfPages({
 ```
 
 The order of `pages` is the output order. Omitting an original page deletes it. Repeating a page duplicates it. JPG and PNG images can become natural-size pages or be fitted onto A4/custom page sizes. The hosted gratistools.be UI adds previews, drag-and-drop and broader image-format conversion around this core.
+
+## Analysis and planning engines
+
+The analysis engines are UI-independent and operate on ordinary JavaScript arrays and objects. Seeded sampling is deterministic for audit/reproduction; unseeded sampling uses browser cryptographic randomness where available. Availability functions work on timestamps, while the text parser can interpret local browser time (including daylight-saving rules) or a fixed offset.
+
+```js
+import {
+  analyzeDecisionMatrix,
+  stratifiedSample,
+  parseBallots,
+  consensusRank,
+  bestMeetingWindows,
+} from './src/index.js';
+```
+
+The decision matrix exposes normalized scores, dominated alternatives and winner stability bands instead of only a final score. Consensus ranking returns the complete pairwise matrix so cycles and method differences stay inspectable.
 
 ## Privacy
 
