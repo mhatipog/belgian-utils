@@ -20,6 +20,9 @@ test('indexation, rent, company-car VAA and mobility budget calculations', () =>
   assert.ok(Math.abs(car.ageFactor-.94)<1e-12);
   assert.equal(car.co2Percentage,.04);
   assert.ok(car.taxableAnnual>=1690);
+  const begunMonth=companyCarBenefitBelgium({catalogValue:50000,co2:0,fuel:'electric',firstRegistration:'2025-01-31',benefitDate:'2026-01-01'});
+  assert.equal(begunMonth.ageMonths,13);
+  assert.ok(Math.abs(begunMonth.ageFactor-.94)<1e-12);
   const mob=mobilityBudgetSplit({budget:10000,grossAnnual:60000,pillar1:3000,pillar2:2000});
   assert.equal(mob.pillar3Gross,5000);
   assert.equal(mob.pillar3Contribution,1903.5);
