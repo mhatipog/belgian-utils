@@ -23,7 +23,7 @@ This package contains the reusable local processing logic behind parts of [grati
 - Lambert 72 and Lambert 2008 conversion
 - Shared safe XML and CSV helpers
 - Local metadata inspection and privacy cleaning for JPEG, PNG, WebP, DOCX, XLSX and PPTX
-- Local PDF page composition: reorder/delete pages, insert pages from another PDF, rotate pages, and add JPG/PNG images as PDF pages
+- Local PDF page composition: reorder/delete pages, insert pages from another PDF, rotate pages, and add JPG/PNG images as PDF pages\n- Belgian notice-period, indexation, rent, company-car VAA and mobility-budget calculators\n- Belgian VAT-grid reference and enterprise-number batch cleaning\n- 2025 municipality-merger/NIS mappings and 2026–27 school holiday calendars\n- Belgian statutory/commercial interest history and working-day calculations\n- Local XLSX reader + one-to-many NACE-BEL 2008→2025 migration mapping
 - Weighted decision matrices with cost/benefit normalization, dominance detection and weight sensitivity analysis
 - Reproducible simple, systematic and stratified sampling, including finite-population sample-size planning
 - Consensus ranking with Schulze strongest paths, Borda, Copeland, Condorcet checks and pairwise matrices
