@@ -44,11 +44,11 @@ export const HEALTH_INDEX_RECENT=[
 export const CAR_BENEFIT_2026={year:2026,reference:{petrol:70,lpg:70,natural_gas:70,diesel:58,electric:0},minimum:1690};
 export function companyCarBenefitBelgium({catalogValue,co2=0,fuel='petrol',firstRegistration,benefitDate='2026-01-01',annualContribution=0}={}){
   const value=+catalogValue,c=+co2,contrib=+annualContribution;if(!(value>0)||!(c>=0)||!(contrib>=0))throw new Error('Enter a positive catalog value and non-negative CO₂/contribution values.');
-  const months=monthsBetween(firstRegistration,benefitDate), completedYears=Math.floor(months/12),ageFactor=Math.max(.70,1-.06*Math.min(5,completedYears));
+  const first=date(firstRegistration,'first registration'),benefit=date(benefitDate,'benefit date');if(benefit<first)throw new Error('Benefit date cannot be before first registration.');const ageMonths=(benefit.getUTCFullYear()-first.getUTCFullYear())*12+benefit.getUTCMonth()-first.getUTCMonth()+1,ageBand=Math.min(5,Math.floor((ageMonths-1)/12)),ageFactor=Math.max(.70,1-.06*ageBand);
   let co2Percentage;
   if(fuel==='electric')co2Percentage=.04;else {const ref=fuel==='diesel'?58:70;co2Percentage=clamp(.055+.001*(c-ref),.04,.18);}
   const raw=value*(6/7)*ageFactor*co2Percentage, statutory=Math.max(CAR_BENEFIT_2026.minimum,raw), taxable=Math.max(0,statutory-contrib);
-  return {year:2026,catalogValue:value,co2:c,fuel,ageMonths:months,ageFactor,co2Percentage,rawAnnual:round2(raw),statutoryAnnual:round2(statutory),annualContribution:contrib,taxableAnnual:round2(taxable),taxableMonthly:round2(taxable/12),minimumApplied:raw<CAR_BENEFIT_2026.minimum};
+  return {year:2026,catalogValue:value,co2:c,fuel,ageMonths,ageFactor,co2Percentage,rawAnnual:round2(raw),statutoryAnnual:round2(statutory),annualContribution:contrib,taxableAnnual:round2(taxable),taxableMonthly:round2(taxable/12),minimumApplied:raw<CAR_BENEFIT_2026.minimum};
 }
 
 export const MOBILITY_BUDGET_2026={minimum:3233,absoluteMaximum:17244,pillar3Contribution:.3807};
