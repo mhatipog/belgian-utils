@@ -1,7 +1,7 @@
 {
   "name": "belgian-utils",
-  "version": "0.2.0",
-  "description": "Open source JavaScript utilities for Belgian business formats, local file privacy and PDF processing.",
+  "version": "0.3.0",
+  "description": "Open source JavaScript utilities for Belgian business formats, local file privacy, PDF processing and Belgian calculations.",
   "type": "module",
   "scripts": {
     "test": "node --test"
@@ -20,7 +20,12 @@
     "bce",
     "pdf",
     "privacy",
-    "browser"
+    "browser",
+    "notice-period",
+    "indexation",
+    "mobility-budget",
+    "nace",
+    "working-days"
   ],
   "license": "MIT",
   "dependencies": {
