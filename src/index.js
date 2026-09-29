@@ -22,4 +22,9 @@ export * from './pdf/page-editor.js';
 export * from './analysis/decision.js';
 export * from './analysis/sampling.js';
 export * from './analysis/consensus.js';
-export * from './analysis/availability.js';\nexport * from './be/employment-finance.js';\n\nexport * from './be/vat-enterprise.js';\n\nexport * from './be/calendar-geo.js';\n\nexport * from './be/interest-days.js';\n\nexport * from './xlsx-lite.js';\n
+export * from './analysis/availability.js';
+export * from './be/employment-finance.js';
+\nexport * from './be/vat-enterprise.js';
+\nexport * from './be/calendar-geo.js';
+\nexport * from './be/interest-days.js';
+\nexport * from './xlsx-lite.js';
