@@ -36,6 +36,11 @@ export function noticePeriodBelgium({contractStart,noticeStart,initiator='employ
 export function indexAmount({amount,oldIndex,newIndex}={}){const a=+amount,o=+oldIndex,n=+newIndex;if(!(a>=0)||!(o>0)||!(n>0))throw new Error('Amount must be non-negative and both indices must be positive.');const factor=n/o,indexed=a*factor;return {amount:a,oldIndex:o,newIndex:n,factor,indexed:round2(indexed),difference:round2(indexed-a),percent:(factor-1)*100};}
 export function rentIndexationBelgium(opts={}){return {...indexAmount(opts),formula:'base rent × new health index ÷ initial health index'};}
 
+export const HEALTH_INDEX_RECENT=[
+['2025-08',135.64,100.05],['2025-09',135.26,99.77],['2025-10',135.76,100.14],['2025-11',136.49,100.68],['2025-12',136.69,100.82],
+['2026-01',137.37,101.33],['2026-02',138.06,101.84],['2026-03',137.78,101.63],['2026-04',139.33,102.77],['2026-05',139.22,102.69],['2026-06',139.08,102.59],['2026-07',139.96,103.24],['2026-08',140.30,103.49]
+].map(([month,base2013,base2025])=>({month,base2013,base2025}));
+
 export const CAR_BENEFIT_2026={year:2026,reference:{petrol:70,lpg:70,natural_gas:70,diesel:58,electric:0},minimum:1690};
 export function companyCarBenefitBelgium({catalogValue,co2=0,fuel='petrol',firstRegistration,benefitDate='2026-01-01',annualContribution=0}={}){
   const value=+catalogValue,c=+co2,contrib=+annualContribution;if(!(value>0)||!(c>=0)||!(contrib>=0))throw new Error('Enter a positive catalog value and non-negative CO₂/contribution values.');
