@@ -18,3 +18,8 @@ export * from './file/metadata.js';
 
 export * from './file/metadata-intelligence.js';
 export * from './pdf/page-editor.js';
+
+export * from './analysis/decision.js';
+export * from './analysis/sampling.js';
+export * from './analysis/consensus.js';
+export * from './analysis/availability.js';
