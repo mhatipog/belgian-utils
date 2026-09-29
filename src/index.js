@@ -16,4 +16,4 @@ export * from './be/statements-any.js';
 export * from './be/fake.js';
 export * from './file/metadata.js';
 
-export * from './file/metadata-intelligence.js';
+export * from './file/metadata-intelligence.js';\nexport * from './pdf/page-editor.js';\n

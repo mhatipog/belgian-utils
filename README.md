@@ -22,7 +22,32 @@ This package contains the reusable local processing logic behind parts of [grati
 - EPC payment QR payload generation
 - Lambert 72 and Lambert 2008 conversion
 - Shared safe XML and CSV helpers
-- Local metadata inspection and privacy cleaning for JPEG, PNG, WebP, DOCX, XLSX and PPTX
+- Local metadata inspection and privacy cleaning for JPEG, PNG, WebP, DOCX, XLSX and PPTX\n- Local PDF page composition: reorder/delete pages, insert pages from another PDF, rotate pages, and add JPG/PNG images as PDF pages
+
+## PDF page editing
+
+The reusable engine behind the PDF page editor is exported as `composePdfPages`. It works entirely on bytes and has no network access:
+
+```js
+import { composePdfPages, inspectPdfPages } from './src/index.js';
+
+const info = await inspectPdfPages(mainPdf);
+const edited = await composePdfPages({
+  sources: {
+    main: { type: 'pdf', bytes: mainPdf },
+    extra: { type: 'pdf', bytes: extraPdf },
+    photo: { type: 'jpeg', bytes: jpegBytes },
+  },
+  pages: [
+    { source: 'main', page: 2 },
+    { source: 'photo', pageSize: 'a4', margin: 24 },
+    { source: 'extra', page: 1 },
+    { source: 'main', page: 1, rotate: 90 },
+  ],
+});
+```
+
+The order of `pages` is the output order. Omitting an original page deletes it. Repeating a page duplicates it. JPG and PNG images can become natural-size pages or be fitted onto A4/custom page sizes. The hosted gratistools.be UI adds previews, drag-and-drop and broader image-format conversion around this core.
 
 ## Privacy
 

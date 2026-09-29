@@ -6,7 +6,7 @@ import {
   parseCoda, parseCamt, readUbl, validateInvoice,
   parseIntervat, parseXbrl, epcPayload,
   wgs84ToLambert72, lambert72ToWgs84,
-  inspectMetadata, cleanMetadata, interpretMetadata
+  inspectMetadata, cleanMetadata, interpretMetadata, composePdfPages, inspectPdfPages, pdfPageDescriptors
 } from '../src/index.js';
 import { parseXml } from '../src/xml.js';
 
@@ -125,4 +125,50 @@ test('metadata intelligence surfaces deep document signals', () => {
   assert.ok(x.insights.some((i)=>i.title.includes('Hidden spreadsheet')));
   assert.ok(x.insights.some((i)=>i.title.includes('Embedded objects')));
   assert.ok(x.insights.some((i)=>i.title.includes('PDF revisions')));
+});
+
+
+test('PDF page composer reorders, inserts, rotates and adds images', async () => {
+  const { PDFDocument } = await import('pdf-lib');
+  const makePdf = async (sizes) => {
+    const doc = await PDFDocument.create();
+    for (const size of sizes) doc.addPage(size);
+    return new Uint8Array(await doc.save());
+  };
+
+  const main = await makePdf([[300, 400], [310, 410], [320, 420]]);
+  const extra = await makePdf([[200, 250]]);
+  const png = Uint8Array.from(Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=', 'base64'));
+
+  const out = await composePdfPages({
+    sources: {
+      main: { type: 'pdf', bytes: main },
+      extra: { type: 'pdf', bytes: extra },
+      photo: { type: 'png', bytes: png },
+    },
+    pages: [
+      { source: 'main', page: 2 },
+      { source: 'photo', pageSize: 'a4', margin: 20 },
+      { source: 'extra', page: 1, rotate: 90 },
+      { source: 'main', page: 1 },
+    ],
+  });
+
+  const info = await inspectPdfPages(out);
+  assert.equal(info.length, 4);
+  assert.deepEqual([info[0].width, info[0].height], [310, 410]);
+  assert.ok(Math.abs(info[1].width - 595.28) < 0.01);
+  assert.equal(info[2].rotation, 90);
+  assert.deepEqual(pdfPageDescriptors('main', 3).map((x) => x.page), [1, 2, 3]);
+});
+
+test('PDF page composer validates page references', async () => {
+  const { PDFDocument } = await import('pdf-lib');
+  const doc = await PDFDocument.create();
+  doc.addPage([100, 100]);
+  const bytes = new Uint8Array(await doc.save());
+  await assert.rejects(
+    composePdfPages({ sources: { main: { type: 'pdf', bytes } }, pages: [{ source: 'main', page: 2 }] }),
+    /between 1 and 1/
+  );
 });
