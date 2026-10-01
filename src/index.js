@@ -36,3 +36,7 @@ export * from './xlsx-lite.js';
 export * from './be/pain001.js';
 export * from './be/reconciliation.js';
 export * from './be/invoice-audit.js';
+
+export * from './be/lez.js';
+export * from './be/address-authorities.js';
+export * from './be/property-portals.js';
