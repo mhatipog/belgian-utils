@@ -40,8 +40,16 @@ function zone(id,name,official,check,fuel,euro,countryCode){
   let registrationRequired=false;
   let registrationNote='';
   if(foreign){
-    if(id==='antwerp' && countryCode==='NL') registrationNote='Dutch number plates are exempt from the Antwerp foreign-vehicle registration step.';
-    else {
+    if(countryCode==='NL'){
+      if(id==='brussels' && status!=='allowed'){
+        registrationRequired=true;
+        registrationNote='A compliant Dutch vehicle is read via Dutch vehicle data. For a non-compliant Dutch vehicle, Brussels requires registration before a day pass or exemption can be arranged.';
+      } else {
+        registrationNote=id==='brussels'
+          ? 'A compliant Dutch vehicle does not need separate Brussels registration.'
+          : 'Compliant Dutch vehicles are read automatically through RDW data and do not need separate registration.';
+      }
+    } else {
       registrationRequired=true;
       registrationNote='A foreign number plate must be registered with this LEZ even when the vehicle meets the emissions threshold.';
     }
