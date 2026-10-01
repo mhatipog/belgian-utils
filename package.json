@@ -1,6 +1,6 @@
 {
   "name": "belgian-utils",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Open source JavaScript utilities for Belgian business formats, local file privacy, PDF processing and Belgian calculations.",
   "type": "module",
   "scripts": {
@@ -25,7 +25,11 @@
     "indexation",
     "mobility-budget",
     "nace",
-    "working-days"
+    "working-days",
+    "pain001",
+    "iso20022",
+    "reconciliation",
+    "peppol-audit"
   ],
   "license": "MIT",
   "dependencies": {
