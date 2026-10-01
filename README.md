@@ -28,6 +28,9 @@ This package contains the reusable local processing logic behind parts of [grati
 - Reproducible simple, systematic and stratified sampling, including finite-population sample-size planning
 - Consensus ranking with Schulze strongest paths, Borda, Copeland, Condorcet checks and pairwise matrices
 - Availability interval merging and duration-aware maximum-attendance meeting-window optimization
+- ISO 20022 `pain.001.001.09` SEPA payment batch generation and local validation
+- Explainable UBL invoice ↔ CODA/CAMT transaction reconciliation
+- Peppol/UBL invoice batch auditing for validation counts, duplicates, VAT totals and overdue invoices
 
 ## PDF page editing
 
@@ -69,6 +72,24 @@ import {
 ```
 
 The decision matrix exposes normalized scores, dominated alternatives and winner stability bands instead of only a final score. Consensus ranking returns the complete pairwise matrix so cycles and method differences stay inspectable.
+
+## Finance workflow engines
+
+The finance engines are ordinary JavaScript functions with no network access:
+
+```js
+import {
+  buildPain001,
+  reconcileInvoices,
+  auditInvoices,
+} from './src/index.js';
+```
+
+`buildPain001()` creates ISO 20022 `pain.001.001.09` XML and validates the most important batch inputs such as IBANs, amounts, references and duplicate end-to-end IDs. Bank-specific upload profiles can add stricter rules, so production payment files should still be tested with the target bank.
+
+`reconcileInvoices()` scores sales invoices against incoming bank transactions using explainable signals: payment reference, exact amount, invoice number, customer name and date proximity. It returns matched, probable/review, unmatched and duplicate-looking records instead of hiding the matching rationale.
+
+`auditInvoices()` operates on normalized UBL invoice models and their validation issues. It reports duplicate invoice identities/fingerprints, validation counts, VAT totals, overdue items and supplier/customer aggregates.
 
 ## Privacy
 
