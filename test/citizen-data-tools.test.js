@@ -16,11 +16,14 @@ test('LEZ comparison reflects 2026 Brussels vs Flemish thresholds', () => {
   assert.equal(petrol2.zones.find((z)=>z.id==='antwerp').status,'allowed');
 });
 
-test('foreign registration differences are surfaced', () => {
-  const nl=compareBelgianLez({fuel:'diesel',euro:6,countryCode:'NL'});
-  assert.equal(nl.zones.find((z)=>z.id==='antwerp').registrationRequired,false);
-  assert.equal(nl.zones.find((z)=>z.id==='ghent').registrationRequired,true);
-  assert.equal(nl.zones.find((z)=>z.id==='brussels').registrationRequired,true);
+test('Dutch registration exceptions are surfaced correctly', () => {
+  const compliant=compareBelgianLez({fuel:'diesel',euro:6,countryCode:'NL'});
+  assert.equal(compliant.zones.find((z)=>z.id==='antwerp').registrationRequired,false);
+  assert.equal(compliant.zones.find((z)=>z.id==='ghent').registrationRequired,false);
+  assert.equal(compliant.zones.find((z)=>z.id==='brussels').registrationRequired,false);
+
+  const brusselsNonCompliant=compareBelgianLez({fuel:'diesel',euro:5,countryCode:'NL'});
+  assert.equal(brusselsNonCompliant.zones.find((z)=>z.id==='brussels').registrationRequired,true);
 });
 
 test('authority resolver derives Belgian region from official place rows', () => {
