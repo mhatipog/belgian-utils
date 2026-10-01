@@ -31,6 +31,9 @@ This package contains the reusable local processing logic behind parts of [grati
 - ISO 20022 `pain.001.001.09` SEPA payment batch generation and local validation
 - Explainable UBL invoice ↔ CODA/CAMT transaction reconciliation
 - Peppol/UBL invoice batch auditing for validation counts, duplicates, VAT totals and overdue invoices
+- Belgian 2026 LEZ comparison rules for Brussels, Antwerp and Ghent
+- Belgian postcode/place → municipality, NIS, region and official service-routing helpers
+- Region-aware official property/parcel resource selection for CadGIS, Geopunt, WalOnMap and BruGIS
 
 ## PDF page editing
 
@@ -90,6 +93,16 @@ import {
 `reconcileInvoices()` scores sales invoices against incoming bank transactions using explainable signals: payment reference, exact amount, invoice number, customer name and date proximity. It returns matched, probable/review, unmatched and duplicate-looking records instead of hiding the matching rationale.
 
 `auditInvoices()` operates on normalized UBL invoice models and their validation issues. It reports duplicate invoice identities/fingerprints, validation counts, VAT totals, overdue items and supplier/customer aggregates.
+
+## Belgian citizen and property data engines
+
+These engines stay intentionally narrow and explainable:
+
+- `compareBelgianLez()` compares encoded 2026 M1/N1 access thresholds across Brussels, Antwerp and Ghent while returning each city's official checker for exemptions and special cases.
+- `findPlacesByPostcode()` and `authorityProfile()` turn an external Belgian postcode/place dataset into municipality, NIS, region and service-routing output. They do not guess a police zone, water supplier or waste operator when the boundary is more granular than the input.
+- `propertyResources()` chooses the relevant official federal/regional property portals for an already geocoded point. It does not geocode, identify a legal cadastral parcel, or claim to replace an official certificate.
+
+The hosted gratistools.be interface supplies the current bpost/Statbel place dataset and the browser geocoding UX separately.
 
 ## Privacy
 
