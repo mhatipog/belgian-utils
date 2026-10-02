@@ -235,6 +235,68 @@ export function parseNationalNumber(input) {
   return out;
 }
 
+
+function parseSyntheticBirthDate(value) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(value || ''));
+  if (!m) throw new Error('Use a birth date as YYYY-MM-DD.');
+  const year = +m[1], month = +m[2], day = +m[3];
+  if (year < 1900 || year > 2099) throw new Error('Synthetic INSZ generation supports years 1900-2099.');
+  const d = new Date(Date.UTC(year, month - 1, day));
+  if (d.getUTCFullYear() !== year || d.getUTCMonth() !== month - 1 || d.getUTCDate() !== day) throw new Error('Birth date is not a valid calendar date.');
+  return { year, month, day };
+}
+
+function syntheticSequence(sequence, odd) {
+  const n = Number(sequence);
+  if (!Number.isInteger(n) || n < 1 || n > 998) throw new Error('Sequence must be an integer from 001 to 998.');
+  if ((n % 2 === 1) !== odd) throw new Error(odd ? 'Sequence must be odd.' : 'Sequence must be even.');
+  return String(n).padStart(3, '0');
+}
+
+function inszFromBase(base, year) {
+  const source = year >= 2000 ? `2${base}` : base;
+  const check = String(97 - mod97(source)).padStart(2, '0');
+  return base + check;
+}
+
+/**
+ * Create a structurally valid synthetic Belgian national register number.
+ * This does not reserve the number and cannot prove that it is unassigned.
+ */
+export function makeNationalNumber({ birthDate, sex = 'male', sequence } = {}) {
+  const { year, month, day } = parseSyntheticBirthDate(birthDate);
+  if (!['male', 'female'].includes(sex)) throw new Error('Sex must be "male" or "female".');
+  const odd = sex === 'male';
+  const seq = syntheticSequence(sequence ?? (odd ? 1 : 2), odd);
+  const base = `${String(year).slice(-2)}${String(month).padStart(2, '0')}${String(day).padStart(2, '0')}${seq}`;
+  const digits = inszFromBase(base, year);
+  return { ...parseNationalNumber(digits), digits, synthetic: true, kind: 'national' };
+}
+
+/**
+ * Create a structurally valid synthetic BIS number.
+ * For BIS numbers the month is offset by 40 when sex was known at creation,
+ * or by 20 when it was unknown. Unknown-sex BIS sequence numbers are odd.
+ */
+export function makeBisNumber({ birthDate, sex = 'male', sexKnown = true, sequence } = {}) {
+  const { year, month, day } = parseSyntheticBirthDate(birthDate);
+  if (!['male', 'female'].includes(sex)) throw new Error('Sex must be "male" or "female".');
+  const odd = sexKnown ? sex === 'male' : true;
+  const seq = syntheticSequence(sequence ?? (odd ? 1 : 2), odd);
+  const encodedMonth = month + (sexKnown ? 40 : 20);
+  const base = `${String(year).slice(-2)}${String(encodedMonth).padStart(2, '0')}${String(day).padStart(2, '0')}${seq}`;
+  const digits = inszFromBase(base, year);
+  return { ...parseNationalNumber(digits), digits, synthetic: true, kind: 'bis', sexKnown };
+}
+
+/** Convenience wrapper for synthetic INSZ test data. */
+export function makeInsz({ type = 'national', ...options } = {}) {
+  if (type === 'national') return makeNationalNumber(options);
+  if (type === 'bis') return makeBisNumber({ ...options, sexKnown: options.sexKnown !== false });
+  if (type === 'bis-unknown') return makeBisNumber({ ...options, sexKnown: false });
+  throw new Error('Type must be "national", "bis" or "bis-unknown".');
+}
+
 // ---------- Peppol participant IDs ----------
 
 export const PEPPOL_SCHEMES = {
