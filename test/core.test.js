@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
-  parseEnterprise, parseIban, parseOgm, parsePeppolId,
+  parseEnterprise, parseIban, parseOgm, parsePeppolId, parseNationalNumber, makeNationalNumber, makeBisNumber, makeInsz,
   parseCoda, parseCamt, readUbl, validateInvoice,
   parseIntervat, parseXbrl, epcPayload,
   wgs84ToLambert72, lambert72ToWgs84,
@@ -21,6 +21,23 @@ test('Belgian identifiers', () => {
   assert.equal(parseIban('BE73 7350 1234 5660').valid, true);
   assert.equal(parseOgm('+++202/6000/12320+++').valid, true);
   assert.equal(parsePeppolId('0208:0753124628').valid, true);
+});
+
+
+test('synthetic Belgian INSZ generators', () => {
+  const rrn = makeNationalNumber({ birthDate: '1985-07-30', sex: 'male', sequence: 33 });
+  assert.equal(rrn.formatted, '85.07.30-033.28');
+  assert.equal(parseNationalNumber(rrn.digits).valid, true);
+  const modern = makeNationalNumber({ birthDate: '2005-01-01', sex: 'female', sequence: 124 });
+  assert.equal(modern.birthDate, '2005-01-01');
+  assert.equal(modern.sex, 'female');
+  const bis = makeBisNumber({ birthDate: '1990-03-15', sex: 'female', sexKnown: true, sequence: 2 });
+  assert.equal(bis.valid, true);
+  assert.equal(bis.type, 'BIS number (sex known)');
+  const unknown = makeInsz({ type: 'bis-unknown', birthDate: '2099-01-01', sequence: 1 });
+  assert.equal(unknown.valid, true);
+  assert.equal(unknown.type, 'BIS number (sex unknown at registration)');
+  assert.throws(() => makeNationalNumber({ birthDate: '2005-01-01', sex: 'female', sequence: 123 }), /even/);
 });
 
 test('CODA and CAMT', () => {
