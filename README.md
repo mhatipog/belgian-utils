@@ -9,7 +9,7 @@ This package contains the reusable local processing logic behind parts of [grati
 - Belgian enterprise and VAT number validation
 - Belgian IBAN, bank code and BIC helpers
 - OGM and RF payment reference helpers
-- Belgian national number parsing
+- Belgian national number parsing and synthetic RN/BIS/INSZ test-number generation
 - Peppol participant ID parsing
 - CODA parsing and anonymisation
 - CAMT parsing
@@ -119,11 +119,12 @@ npm test
 ## Example
 
 ```js
-import { parseEnterprise, parseIban, parseOgm } from './src/index.js';
+import { parseEnterprise, parseIban, parseOgm, makeInsz } from './src/index.js';
 
 console.log(parseEnterprise('BE 0753.124.628'));
 console.log(parseIban('BE73 7350 1234 5660'));
 console.log(parseOgm('+++202/6000/12320+++'));
+console.log(makeInsz({ type: 'national', birthDate: '2099-01-01', sex: 'female', sequence: 2 }));
 ```
 
 ## Scope
