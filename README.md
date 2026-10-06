@@ -4,6 +4,32 @@ Open source JavaScript utilities behind gratistools.be, focused on Belgian busin
 
 This package contains the reusable local processing logic behind parts of [gratistools.be](https://gratistools.be/). The website itself, account features, analytics, deployment configuration and operational code are intentionally not part of this repository.
 
+
+## Parquet & Delta Lake workbench core
+
+The package now also exposes browser-local building blocks for inspecting and editing Parquet and Delta Lake data:
+
+- read and rewrite Parquet data with explicit types;
+- inspect Parquet schema, row groups, column chunks, codecs, encodings, statistics, sizes and key-value metadata;
+- replay Delta JSON transaction logs and inspect version-by-version history;
+- load an older Delta snapshot without mutating history;
+- compare Delta versions;
+- append a coherent overwrite commit while preserving the existing log and data files;
+- append a RESTORE commit when the referenced historical Parquet files are still present.
+
+The high-level UI lives on [GratisTools.be](https://gratistools.be/parquet-delta-editor); this repository contains the reusable MIT-licensed logic. Existing Delta log versions are treated as immutable. Low-level Parquet offsets/statistics are inspected read-only and are regenerated on rewrite rather than edited by hand.
+
+```js
+import {
+  readParquetBuffer,
+  inspectDeltaEntries,
+  readDeltaEntries,
+  appendDeltaZip,
+  restoreDeltaZip,
+} from 'belgian-utils'
+```
+
+
 ## Included
 
 - Belgian enterprise and VAT number validation
