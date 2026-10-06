@@ -1,6 +1,6 @@
 {
   "name": "belgian-utils",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "Open source JavaScript utilities for Belgian business formats, local file privacy, PDF processing and Belgian calculations.",
   "type": "module",
   "scripts": {
@@ -34,10 +34,17 @@
     "cadgis",
     "geopunt",
     "address-authorities",
-    "property-data"
+    "property-data",
+    "parquet",
+    "delta-lake",
+    "data-lake",
+    "metadata"
   ],
   "license": "MIT",
   "dependencies": {
-    "pdf-lib": "^1.17.1"
+    "pdf-lib": "^1.17.1",
+    "fflate": "0.8.3",
+    "hyparquet": "1.31.2",
+    "hyparquet-writer": "0.16.10"
   }
 }

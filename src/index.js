@@ -40,3 +40,5 @@ export * from './be/invoice-audit.js';
 export * from './be/lez.js';
 export * from './be/address-authorities.js';
 export * from './be/property-portals.js';
+
+export * from './parquet-delta.js';
