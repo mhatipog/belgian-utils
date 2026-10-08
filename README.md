@@ -30,6 +30,23 @@ import {
 ```
 
 
+## Belgian official open-data engines
+
+The three GratisTools open-data checkers use `src/be/open-data.js`, licensed MIT.
+The library includes a quoted CSV/TSV parser, safe Belgian number parsing,
+source-column detection, cross-checking FAVV operator/PAP/Smiley records,
+Statbel property percentiles and comparisons, and NACE sector time-series rows.
+
+- [FAVV food business checker](https://gratistools.be/favv-food-business-checker)
+- [Statbel property-price checker](https://gratistools.be/belgian-property-price-checker)
+- [SectorPulse NACE 2025](https://gratistools.be/sector-pulse-belgium)
+
+Data is **not bundled** in the npm library. Download current original source files
+from the FAVV or Statbel. The website supports local file import, including source ZIPs.
+Keep source date, coverage and suppressed values visible. An absent match in a user's
+file does not establish that a company is unregistered. The interface and deployment
+remain part of the separate private Gratistools application.
+
 ## Included
 
 - Belgian enterprise and VAT number validation
