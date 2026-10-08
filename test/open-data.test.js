@@ -46,3 +46,18 @@ test('NACE2 official monthly regions aggregate known records only',()=>{
  assert.equal(rows[0].starts,17);assert.equal(rows[0].stops,6);
  assert.equal(rows[0].stock,230);
 });
+
+test('FAVV operator name search uses the separate Smiley establishment name only',()=>{
+ const ops=parseOpenData('"OP Uniek Nr Id ","LNO Uniek Nr ","PAP Id","GEM Naam ","PAP ACT Omschrijving"\n"2328003364","0417497106","1017","Gent","Hanteren"\n"2000000000","0999999999","9999","Leuven","Opslag"');
+ const smileys=parseOpenData('"Vestiging Uniek nr.","Vestiging Naam","Smiley geldig tot"\n"2328003364","Demo Bakkerij","2027/03/31"');
+ const f=guessFields(ops.headers,'favv'),sf=guessFields(smileys.headers,'smileys');
+ const named=matchFavv(ops,f,'bakkerij',{smileys,smileyFields:sf});
+ assert.equal(named.length,1);
+ assert.equal(named[0].key,'0417497106');
+ assert.equal(named[0].name,'Demo Bakkerij');
+ assert.equal(named[0].nameSource,'smileys');
+ assert.equal(named[0].sourceFields.length,5);
+ assert.deepEqual(named[0].sourceFields[4],['PAP ACT Omschrijving','Hanteren']);
+ assert.equal(matchFavv(ops,f,'bakkerij').length,0,'No invented company-name coverage without Smiley data');
+ assert.equal(matchFavv(ops,f,'Leuven').length,1,'Municipality search still works');
+});
