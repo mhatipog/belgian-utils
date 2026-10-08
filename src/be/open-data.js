@@ -14,52 +14,62 @@ export function enterpriseKey(value) {
   return s.length === 9 ? '0' + s : s.length === 10 ? s : '';
 }
 function firstRecord(text) {
-  let quoted=false, out='';
-  for(let i=0;i<Math.min(text.length,30000);i++){
-    const c=text[i]; if(c==='"')quoted=!quoted;
-    if(!quoted && (c==='\r'||c==='\n'))break;
-    out+=c;
-  }
-  return out;
+  const s=String(text).replace(/^\uFEFF/,'');
+  const end=s.search(/[\r\n]/);
+  return end<0?s.slice(0,30000):s.slice(0,Math.min(end,30000));
 }
 export function guessDelimiter(text) {
-  const line=firstRecord(String(text).replace(/^\uFEFF/,''));
-  const counts=[['\t',0],[';',0],[',',0]];
+  const line=firstRecord(text);
+  const counts=[['|',0],['\t',0],[';',0],[',',0]];
   let quoted=false;
   for(let i=0;i<line.length;i++){
-    const c=line[i];
-    if(c==='"' && line[i+1]==='"'){i++;continue;}
-    if(c==='"'){quoted=!quoted;continue;}
-    if(!quoted)for(const pair of counts)if(c===pair[0])pair[1]++;
+    const char=line[i];
+    if(char==='"' && line[i+1]==='"' && quoted){i++;continue;}
+    if(char==='"'){quoted=!quoted;continue;}
+    if(!quoted)for(const pair of counts)if(char===pair[0])pair[1]++;
   }
-  return counts.sort((a,b)=>b[1]-a[1])[0][1] ? counts[0][0] : ';';
+  counts.sort((a,b)=>b[1]-a[1]);
+  return counts[0][1]?counts[0][0]:';';
 }
-export function parseOpenData(text, {delimiter, maxRows=1000000}={}) {
+/** RFC-4180-style parser, tolerant of literal quotes inside unquoted publisher cells.
+ * Rows are bounded; malformed individual quote characters do not swallow the
+ * remainder of the 80MB FAVV operator CSV.
+ */
+export function parseOpenData(text,{delimiter,maxRows=2000000}={}) {
   const input=String(text??'').replace(/^\uFEFF/,'');
   const sep=delimiter||guessDelimiter(input);
-  const rows=[]; let row=[],cell='',quoted=false;
-  // Standard RFC-4180 escaped quotes; CRLF and line feeds accepted.
+  const rows=[];let row=[],cell='',quoted=false;
   for(let i=0;i<input.length;i++){
-    const c=input[i];
-    if(c==='"' && quoted && input[i+1]==='"'){cell+='"';i++;continue;}
-    if(c==='"'){quoted=!quoted;continue;}
-    if(!quoted && c===sep){row.push(cell.trim());cell='';continue;}
-    if(!quoted && (c==='\r'||c==='\n')){
-      if(c==='\r' && input[i+1]==='\n')i++;
+    const ch=input[i],next=input[i+1];
+    if(ch==='"'){
+      if(quoted){
+        if(next==='"'){cell+='"';i++;continue;}
+        if(next===sep || next==='\r' || next==='\n' || next===undefined){quoted=false;continue;}
+        // Publisher includes an unescaped quotation mark mid-value.
+        cell+='"';continue;
+      }
+      if(!cell.trim()){quoted=true;cell='';continue;}
+      cell+='"';continue;
+    }
+    if(!quoted && ch===sep){row.push(cell.trim());cell='';continue;}
+    if(!quoted && (ch==='\r'||ch==='\n')){
+      if(ch==='\r'&&next==='\n')i++;
       row.push(cell.trim());cell='';
       if(row.some(Boolean))rows.push(row);
       row=[];
-      if(rows.length>maxRows+1)throw new Error('Too many records: use a smaller official extract (limit '+maxRows+').');
+      if(rows.length>maxRows+1)throw new Error('Source exceeds permitted record count: '+maxRows);
       continue;
     }
-    cell+=c;
+    cell+=ch;
   }
-  if(quoted)throw new Error('Unclosed quoted field in source file.');
   row.push(cell.trim());if(row.some(Boolean))rows.push(row);
-  if(!rows.length)throw new Error('The file contains no records.');
+  if(rows.length<2)throw new Error('No tabular records found in the official source.');
   const headers=rows.shift().map((h,i)=>h||'Column '+(i+1));
-  if(headers.length<2)throw new Error('No delimited columns found. Select the TXT/CSV member of the official ZIP.');
-  return { headers, rows: rows.map(r=>headers.map((_,i)=>r[i]??'')), delimiter:sep, truncated:false };
+  if(headers.length<2)throw new Error('Unsupported column delimiter in official data.');
+  // Prevent a badly quoted source from silently accepting millions of broken rows.
+  const invalid=rows.slice(0,Math.min(200,rows.length)).filter(r=>r.length!==headers.length).length;
+  if(invalid>10)throw new Error('Source file rows do not match the header structure.');
+  return {headers,rows:rows.map(r=>headers.map((_,i)=>r[i]??'')),delimiter:sep,truncated:false};
 }
 export function numericValue(value) {
   let s=String(value??'').trim();
@@ -72,32 +82,41 @@ export function numericValue(value) {
   }else if(s.includes(',')&&!s.includes('.'))s=s.replace(',','.');
   const n=Number(s);return Number.isFinite(n)?n:null;
 }
-const HINTS={
-  favv: {
-    key: ['ondernemingsnummer','numentreprise','entreprisenumber','nummeronderneming','kbonummer','num_bce','bce','kbo'],
-    name: ['benaming','denomination','naam','enseigne','operatorname','nom','name'],
-    pap: ['papcode','codepap','pap','activiteitencode','codeactivite'],
-    permit: ['toelatingsnummer','erkenningsnummer','numerodautorisation','numerodagrement','autorisation','agrement'],
-    site: ['vestigingseenheid','uniteetablissement','operatornummer','noperateur'],
-  },
-  property: {
-    geo: ['cdrefnis','refnis','nis9','nis7','gemeentecode','codemunicipality','commune','gemeente','municipality','geography','geo'],
-    year: ['jaar','annee','year','period','periode'],
-    type: ['typegebouw','typebien','aard','nature','buildingtype','type'],
-    count: ['transacties','transaction','aantal','nombre','count','msn'],
-    median: ['median','mediane','q50','p50','msp50'],
-    p25: ['q25','p25','msp25'],
-    p75: ['q75','p75','msp75'],
-  },
-  sector: {
-    nace: ['nace2025','nacebel2025','nacebel','nace','activiteit','activite','activity'],
-    month: ['maand','mois','month','periode','period','date','tijd'],
-    starts: ['oprichtingen','creations','starters','starts','naissances','start'],
-    stops: ['stopzettingen','cessations','closures','cesses','stops','radiations'],
-    stock: ['actievebedrijven','assujettis','entreprisesactives','stock','population','total'],
-    category: ['beweging','mouvement','indicator','type','measure','variable'],
-    amount: ['waarde','valeur','value','nombre','aantal','count'],
-  }
+const HINTS = {
+ favv:{
+  key:['LNO Uniek Nr','ondernemingsnummer','numeroentreprise','entreprisenumber','numentreprise','kbonummer'],
+  site:['OP Uniek Nr Id','OP Uniek Nr','vestiginguniek','vestigingseenheid'],
+  name:['benaming','vestigingnaam','denomination','operatorname','nomentreprise'],
+  pap:['PAP Id','papcode','codepap','pap'],
+  permit:['ERK Nummer','toelatingsnummer','erkenningsnummer','numeroautorisation'],
+  city:['GEM Naam','gemeente','commune'],
+  postcode:['PC Postcode','postcode','codepostal']
+ },
+ activities:{pap:['PAP Id','papcode'],description:['PAP omschrijving','papdescription','omschrijving']},
+ smileys:{site:['Vestiging Uniek nr.','vestiginguniek'],name:['Vestiging Naam'],validUntil:['Smiley geldig tot']},
+ property:{
+  geo:['CD_REFNIS','CD_STAT_SECTOR','cdrefnis','cdstatsector','nis9','gemeentecode','commune','gemeente'],
+  year:['CD_YEAR','year','jaar','annee'],
+  period:['CD_PERIOD','period','periode'],
+  type:['CD_TYPE_NL','CD_TYPE','typegebouw','typebien','aard'],
+  count:['MS_TOTAL_TRANSACTIONS','MS_TRANSACTIONS','transacties','transactions','count'],
+  median:['MS_P_50_median','MS_P50 (MEDIAN_PRICE)','msp50median','msp50medianprice','mediane','median','q50','p50'],
+  p25:['MS_P_25','MS_P25','q25','p25'],
+  p75:['MS_P_75','MS_P75','q75','p75']
+ },
+ sector:{
+  nace:['NACE2','nace2025','nacebel2025','nace','activity'],
+  year:['YEAR','CD_YEAR','jaar','annee'],
+  month:['MONTH','maand','mois','periode','date'],
+  starts:['MS_NUM_VAT_FIRST_STRT','firststart','creations','starters'],
+  restarts:['MS_NUM_VAT_RESTART','restart'],
+  stops:['MS_NUM_VAT_STOP','stopzettingen','cessations','closures'],
+  stock:['MS_NUM_VAT_EOP','stock','entreprisesactives'],
+  region:['CD_REGION','region'],
+  legal:['TX_LGL_CO_TYPE_NL_LVL1','legalform'],
+  category:['indicator','measure','variable'],
+  amount:['value','valeur','waarde']
+ }
 };
 export function guessFields(headers,kind){
   const hints=HINTS[kind]||{};const result={};
@@ -112,47 +131,82 @@ export function guessFields(headers,kind){
 }
 export function cellValue(row,fields,key){ const i=fields[key];return Number.isInteger(i)&&i>=0?String(row[i]??''):''; }
 export function matchFavv(data,fields,query,{activities=null,activityFields=null,smileys=null,smileyFields=null,max=40}={}){
-  const q=foldData(query);if(q.length<3)return[];
-  const matched=data.rows.filter(row=>{
-    const number=enterpriseKey(query),k=enterpriseKey(cellValue(row,fields,'key'));
-    return (number&&k===number) || foldData(cellValue(row,fields,'name')).includes(q) ||
-      (fields.name<0 && row.some(x=>foldData(x).includes(q)));
-  }).slice(0,max);
-  const activityIndex=new Map();
-  if(activities&&activityFields){for(const r of activities.rows){const p=foldData(cellValue(r,activityFields,'pap'));if(p)activityIndex.set(p,r);}}
-  const smileyKeys=new Set();
-  if(smileys&&smileyFields){for(const r of smileys.rows){const key=enterpriseKey(cellValue(r,smileyFields,'key'));if(key)smileyKeys.add(key);}}
-  return matched.map(row=>{
-    const key=enterpriseKey(cellValue(row,fields,'key'));
-    const pap=cellValue(row,fields,'pap');
-    const activity=activityIndex.get(foldData(pap));
-    return {key,name:cellValue(row,fields,'name'),pap,permit:cellValue(row,fields,'permit'),
-      activity:activity?activity.join(' | ').slice(0,220):'',
-      smiley:smileys&&smileyFields?.key>=0 && key ? smileyKeys.has(key) : null};
-  });
+ const q=foldData(query),id=enterpriseKey(query);
+ if(q.length<3)return[];
+ const matches=[];
+ for(const row of data.rows) {
+  const key=enterpriseKey(cellValue(row,fields,'key'));
+  const site=enterpriseKey(cellValue(row,fields,'site'));
+  const rawKey=foldData(cellValue(row,fields,'key'));
+  const rawSite=foldData(cellValue(row,fields,'site'));
+  const byId=(id&&(key===id||site===id))||(q.length>=5&&(rawKey===q||rawSite===q));
+  const byText=(!/^\d+$/.test(q))&&[cellValue(row,fields,'name'),cellValue(row,fields,'city')].some(v=>foldData(v).includes(q));
+  const byPostcode=/^\d{4}$/.test(q)&&cellValue(row,fields,'postcode')===q;
+  if(byId||byText||byPostcode){matches.push(row);if(matches.length===max)break;}
+ }
+ const papIndex=new Map();
+ if(activities&&activityFields?.pap>=0){
+  for(const row of activities.rows){const pap=foldData(cellValue(row,activityFields,'pap'));if(pap)papIndex.set(pap,row);}
+ }
+ const smilesIndex=new Map();
+ if(smileys&&smileyFields?.site>=0){
+  for(const row of smileys.rows){
+   const site=enterpriseKey(cellValue(row,smileyFields,'site'));
+   if(site)smilesIndex.set(site,row);
+  }
+ }
+ return matches.map(row=>{
+  const key=enterpriseKey(cellValue(row,fields,'key'));
+  const site=enterpriseKey(cellValue(row,fields,'site'));
+  const pap=cellValue(row,fields,'pap');
+  const activity=papIndex.get(foldData(pap));
+  const smiley=smileys&&smileyFields?.site>=0&&site ? smilesIndex.has(site):null;
+  return {key,site,name:cellValue(row,fields,'name'),city:cellValue(row,fields,'city'),
+   postcode:cellValue(row,fields,'postcode'),pap,permit:cellValue(row,fields,'permit'),
+   activity:activity?cellValue(activity,activityFields,'description')||activity.join(' | ').slice(0,220):'',
+   smiley,
+   smileyValidUntil:smiley?cellValue(smilesIndex.get(site),smileyFields,'validUntil'):''
+  };
+ });
 }
 export function propertySeries(data,fields,{geo,type}={}){
-  if(fields.geo<0||fields.year<0||fields.median<0)throw new Error('Map the geography, year and median-price columns first.');
-  const rows=data.rows.filter(r=>(!geo||foldData(cellValue(r,fields,'geo'))===foldData(geo))&&(!type||cellValue(r,fields,'type')===type))
-    .map(r=>({geo:cellValue(r,fields,'geo'),type:cellValue(r,fields,'type'),year:cellValue(r,fields,'year'),
-      median:numericValue(cellValue(r,fields,'median')),p25:numericValue(cellValue(r,fields,'p25')),
-      p75:numericValue(cellValue(r,fields,'p75')),count:numericValue(cellValue(r,fields,'count'))}))
-    .filter(x=>x.year).sort((a,b)=>b.year.localeCompare(a.year));
-  return rows;
+ if(fields.geo<0||fields.year<0||fields.median<0)throw new Error('Required geographic, year or median columns are missing.');
+ return data.rows.filter(row=>(!geo||foldData(cellValue(row,fields,'geo'))===foldData(geo))&&(!type||cellValue(row,fields,'type')===type))
+ .map(row=>{
+  const year=cellValue(row,fields,'year'),period=cellValue(row,fields,'period');
+  return {geo:cellValue(row,fields,'geo'),type:cellValue(row,fields,'type'),
+   year:year+(period&&period.toLowerCase()!=='year'?' '+period:''),
+   median:numericValue(cellValue(row,fields,'median')),p25:numericValue(cellValue(row,fields,'p25')),
+   p75:numericValue(cellValue(row,fields,'p75')),count:numericValue(cellValue(row,fields,'count'))};
+ }).filter(x=>x.year).sort((a,b)=>b.year.localeCompare(a.year));
 }
 export function propertyPosition(price,stats) {
-  const p=numericValue(price);
-  if(p===null||p<=0||stats?.median===null||!Number.isFinite(stats?.median)||stats.median<=0)return null;
-  return {difference:Math.round((p/stats.median-1)*1000)/10,range:stats.p25!==null&&stats.p75!==null ?
-    (p<stats.p25?'below-p25':p>stats.p75?'above-p75':'middle-50'):'unknown'};
+ const p=numericValue(price);
+ if(p===null||p<=0||stats?.median===null||!Number.isFinite(stats?.median)||stats.median<=0)return null;
+ return {difference:Math.round((p/stats.median-1)*1000)/10,range:stats.p25!==null&&stats.p75!==null ?
+   (p<stats.p25?'below-p25':p>stats.p75?'above-p75':'middle-50'):'unknown'};
 }
 export function sectorSeries(data,fields,{nace}={}){
-  if(fields.nace<0||fields.month<0)throw new Error('Map NACE and month columns first.');
-  const clean=foldData(nace);
-  return data.rows.filter(r=>!clean||foldData(cellValue(r,fields,'nace'))===clean)
-   .map(r=>({nace:cellValue(r,fields,'nace'),month:cellValue(r,fields,'month'),
-     starts:numericValue(cellValue(r,fields,'starts')),stops:numericValue(cellValue(r,fields,'stops')),
-     stock:numericValue(cellValue(r,fields,'stock')),
-     category:cellValue(r,fields,'category'),amount:numericValue(cellValue(r,fields,'amount'))}))
-   .filter(r=>r.month).sort((a,b)=>a.month.localeCompare(b.month));
+ if(fields.nace<0||fields.month<0)throw new Error('NACE and month fields are required.');
+ // The official TF_STARTERS_45_2025 source publishes NACE2 divisions, not 5-digit subclasses.
+ const raw=String(nace||'').replace(/\D/g,'');
+ const code=raw.length>2?raw.slice(0,2):raw.padStart(2,'0');
+ const byMonth=new Map();
+ for(const row of data.rows){
+  if(foldData(cellValue(row,fields,'nace'))!==foldData(code))continue;
+  const region=cellValue(row,fields,'region');
+  if(fields.region>=0&&region&&!['02000','03000','04000'].includes(region))continue;
+  if(fields.region>=0&&!region)continue; // unavailable geography, never infer values
+  const y=cellValue(row,fields,'year'),m=cellValue(row,fields,'month').padStart(2,'0');
+  const month=(y?y+'-':'')+m;
+  if(!month)continue;
+  const first=numericValue(cellValue(row,fields,'starts')),restart=numericValue(cellValue(row,fields,'restarts'));
+  const stop=numericValue(cellValue(row,fields,'stops')),stock=numericValue(cellValue(row,fields,'stock'));
+  let item=byMonth.get(month);
+  if(!item){item={month,nace:code,starts:0,stops:0,stock:0,rows:0};byMonth.set(month,item);}
+  item.starts+=(first||0)+(restart||0);
+  item.stops+=Math.abs(stop||0);
+  item.stock+=stock||0;item.rows++;
+ }
+ return [...byMonth.values()].filter(x=>x.rows>0).sort((a,b)=>a.month.localeCompare(b.month));
 }
