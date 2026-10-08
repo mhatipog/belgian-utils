@@ -133,20 +133,12 @@ export function cellValue(row,fields,key){ const i=fields[key];return Number.isI
 export function matchFavv(data,fields,query,{activities=null,activityFields=null,smileys=null,smileyFields=null,max=40}={}){
  const q=foldData(query),id=enterpriseKey(query);
  if(q.length<3)return[];
- const matches=[];
- for(const row of data.rows) {
-  const key=enterpriseKey(cellValue(row,fields,'key'));
-  const site=enterpriseKey(cellValue(row,fields,'site'));
-  const rawKey=foldData(cellValue(row,fields,'key'));
-  const rawSite=foldData(cellValue(row,fields,'site'));
-  const byId=(id&&(key===id||site===id))||(q.length>=5&&(rawKey===q||rawSite===q));
-  const byText=(!/^\d+$/.test(q))&&[cellValue(row,fields,'name'),cellValue(row,fields,'city')].some(v=>foldData(v).includes(q));
-  const byPostcode=/^\d{4}$/.test(q)&&cellValue(row,fields,'postcode')===q;
-  if(byId||byText||byPostcode){matches.push(row);if(matches.length===max)break;}
- }
  const papIndex=new Map();
  if(activities&&activityFields?.pap>=0){
-  for(const row of activities.rows){const pap=foldData(cellValue(row,activityFields,'pap'));if(pap)papIndex.set(pap,row);}
+  for(const row of activities.rows){
+   const pap=foldData(cellValue(row,activityFields,'pap'));
+   if(pap)papIndex.set(pap,row);
+  }
  }
  const smilesIndex=new Map();
  if(smileys&&smileyFields?.site>=0){
@@ -155,19 +147,37 @@ export function matchFavv(data,fields,query,{activities=null,activityFields=null
    if(site)smilesIndex.set(site,row);
   }
  }
- return matches.map(row=>{
+ const matches=[],byName=!id&&!/^\d+$/.test(q);
+ for(const row of data.rows){
   const key=enterpriseKey(cellValue(row,fields,'key'));
   const site=enterpriseKey(cellValue(row,fields,'site'));
+  const smileyRow=smilesIndex.get(site);
   const pap=cellValue(row,fields,'pap');
-  const activity=papIndex.get(foldData(pap));
-  const smiley=smileys&&smileyFields?.site>=0&&site ? smilesIndex.has(site):null;
-  return {key,site,name:cellValue(row,fields,'name'),city:cellValue(row,fields,'city'),
-   postcode:cellValue(row,fields,'postcode'),pap,permit:cellValue(row,fields,'permit'),
-   activity:activity?cellValue(activity,activityFields,'description')||activity.join(' | ').slice(0,220):'',
-   smiley,
-   smileyValidUntil:smiley?cellValue(smilesIndex.get(site),smileyFields,'validUntil'):''
-  };
- });
+  const papRow=papIndex.get(foldData(pap));
+  const officialName=cellValue(row,fields,'name');
+  const smileyName=smileyRow?cellValue(smileyRow,smileyFields,'name'):'';
+  const byId=!!id&&(key===id||site===id);
+  const byPostcode=/^\d{4}$/.test(q)&&cellValue(row,fields,'postcode')===q;
+  const byText=byName&&(
+   foldData(officialName).includes(q)||
+   foldData(smileyName).includes(q)||
+   foldData(cellValue(row,fields,'city')).includes(q)||
+   foldData(cellValue(row,fields,'permit')).includes(q)||
+   foldData(pap).includes(q)||
+   (papRow&&foldData(cellValue(papRow,activityFields,'description')).includes(q))
+  );
+  if(!(byId||byPostcode||byText))continue;
+  matches.push({row,key,site,pap,papRow,smileyRow,name:officialName||smileyName,nameSource:officialName?'operators':smileyName?'smileys':''});
+  if(matches.length>=max)break;
+ }
+ return matches.map(({row,key,site,pap,papRow,smileyRow,name,nameSource})=>({
+  key,site,name,nameSource,city:cellValue(row,fields,'city'),postcode:cellValue(row,fields,'postcode'),
+  pap,permit:cellValue(row,fields,'permit'),
+  activity:papRow?cellValue(papRow,activityFields,'description')||papRow.join(' | ').slice(0,220):'',
+  smiley:smileys&&smileyFields?.site>=0&&site?Boolean(smileyRow):null,
+  smileyValidUntil:smileyRow?cellValue(smileyRow,smileyFields,'validUntil'):'',
+  sourceFields:data.headers.map((header,i)=>[header,row[i]??''])
+ }));
 }
 export function propertySeries(data,fields,{geo,type}={}){
  if(fields.geo<0||fields.year<0||fields.median<0)throw new Error('Required geographic, year or median columns are missing.');
