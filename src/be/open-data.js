@@ -34,7 +34,7 @@ export function guessDelimiter(text) {
   }
   return counts.sort((a,b)=>b[1]-a[1])[0][1] ? counts[0][0] : ';';
 }
-export function parseOpenData(text, {delimiter, maxRows=400000}={}) {
+export function parseOpenData(text, {delimiter, maxRows=1000000}={}) {
   const input=String(text??'').replace(/^\uFEFF/,'');
   const sep=delimiter||guessDelimiter(input);
   const rows=[]; let row=[],cell='',quoted=false;
