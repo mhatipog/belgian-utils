@@ -42,3 +42,5 @@ export * from './be/address-authorities.js';
 export * from './be/property-portals.js';
 
 export * from './parquet-delta.js';
+
+export * from './be/open-data.js';
