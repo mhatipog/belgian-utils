@@ -1,4 +1,5 @@
 export * from './be/ids.js';
+export { parseEuVat, EU_VAT_PREFIXES } from './be/eu-vat.js';
 export * from './be/coda.js';
 export * from './be/camt.js';
 export * from './be/ubl.js';

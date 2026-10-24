@@ -1,6 +1,6 @@
 {
   "name": "belgian-utils",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "Open source JavaScript utilities for Belgian business formats, local file privacy, PDF processing and Belgian calculations.",
   "type": "module",
   "scripts": {
@@ -38,7 +38,12 @@
     "parquet",
     "delta-lake",
     "data-lake",
-    "metadata"
+    "metadata",
+    "eu-vat",
+    "vies",
+    "jsvat",
+    "european-union",
+    "vat-validation"
   ],
   "license": "MIT",
   "dependencies": {
@@ -46,5 +51,6 @@
     "fflate": "0.8.3",
     "hyparquet": "1.31.2",
     "hyparquet-writer": "0.16.10"
-  }
+  },
+  "main": "./src/index.js"
 }
