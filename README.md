@@ -5,6 +5,29 @@ Open source JavaScript utilities behind gratistools.be, focused on Belgian busin
 This package contains the reusable local processing logic behind parts of [gratistools.be](https://gratistools.be/). The website itself, account features, analytics, deployment configuration and operational code are intentionally not part of this repository.
 
 
+## EU-27 VAT number validation (JSVAT integration)
+
+Validate Belgian and other EU Member State VAT numbers **locally**, without sending customer identifiers to a server. The new `parseEuVat()` API wraps the [MIT-licensed JSVAT-Next fork](https://github.com/mhatipog/jsvat-next) pinned at commit [`7515d4a`](https://github.com/mhatipog/jsvat-next/commit/7515d4a28d7fca1ab976c2caf81d747f436f16ef). Belgian numbers continue to use this library's established KBO/BCE checksum implementation.
+
+```js
+import { parseEuVat, EU_VAT_PREFIXES } from 'belgian-utils';
+
+parseEuVat('BE 0417.497.106'); // { valid: true, vat: 'BE0417497106', country: 'Belgium', ... }
+parseEuVat('DE136695976');    // { valid: true, vat: 'DE136695976', country: 'Germany', ... }
+parseEuVat('PL1234567890');   // { valid: false, ... } — invalid Polish NIP checksum
+parseEuVat('GR022188887');    // { valid: true, vat: 'EL022188887', ... } — Greek VIES prefix
+EU_VAT_PREFIXES.size;         // 27
+
+const batch = 'BE0417497106\nDE136695976\nPL1234567890'
+  .split('\n').map(parseEuVat);
+```
+
+The parser returns `input`, normalized `vat`, `countryCode`, `country`, `supported`, `valid`, `formatValid`, and `errors`. For Belgian enterprise numbers it also provides `formatted` and `peppol`. A country prefix is required in EU mode (including `BE`); the standalone `parseEnterprise()` still accepts Belgian numbers without it.
+
+**Scope:** 27 EU Member States, including Greece via `EL` (pasted `GR` is normalized). Northern Ireland `XI`, Great Britain `GB`, Norway `NO`, and `EU`/OSS identifiers are excluded. JSVAT implements country-specific format and checksum rules where supported, but a passing local check **does not verify actual VAT registration**. Check registration separately via the European Commission's [VIES service](https://ec.europa.eu/taxation_customs/vies/); its availability or response must not be confused with local validity.
+
+This package performs **no network requests**. GratisTools provides a separate, explicitly activated [online VIES lookup UI](https://gratistools.be/vat-number-checker?scope=eu). The JSVAT distribution is included under its original MIT terms; see [`src/vendor/JSVAT-NEXT-LICENSE.txt`](src/vendor/JSVAT-NEXT-LICENSE.txt), preserving Sergei Panfilov's copyright notice.
+
 ## Parquet & Delta Lake workbench core
 
 The package now also exposes browser-local building blocks for inspecting and editing Parquet and Delta Lake data:
@@ -50,6 +73,7 @@ remain part of the separate private Gratistools application.
 ## Included
 
 - Belgian enterprise and VAT number validation
+- EU-27 VAT syntax/checksum validation, powered by pinned JSVAT-Next rules (offline)
 - Belgian IBAN, bank code and BIC helpers
 - OGM and RF payment reference helpers
 - Belgian national number parsing and synthetic RN/BIS/INSZ test-number generation
