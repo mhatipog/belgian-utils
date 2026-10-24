@@ -1,3 +1,4 @@
+import { readLimitedZipEntries } from '../xlsx-lite.js';
 // Privacy-first metadata inspection and cleaning for common browser-side file formats.
 // Supported: JPEG, PNG, WebP and OOXML (DOCX/XLSX/PPTX). No network access.
 
@@ -223,35 +224,6 @@ function crc32(bytes) {
   return (~crc) >>> 0;
 }
 
-async function inflateRaw(bytes) {
-  if (typeof DecompressionStream === 'undefined') throw new Error('This browser cannot read compressed Office files.');
-  const ds = new DecompressionStream('deflate-raw');
-  return new Uint8Array(await new Response(new Blob([bytes]).stream().pipeThrough(ds)).arrayBuffer());
-}
-
-async function readZip(bytes) {
-  let eocd = -1;
-  for (let p = bytes.length - 22; p >= Math.max(0, bytes.length - 65557); p--) {
-    if (u32le(bytes,p) === 0x06054b50) { eocd = p; break; }
-  }
-  if (eocd < 0) throw new Error('Invalid ZIP/Office file.');
-  const count = u16le(bytes, eocd + 10), cd = u32le(bytes, eocd + 16), files = [];
-  let p = cd;
-  for (let i = 0; i < count; i++) {
-    if (u32le(bytes,p) !== 0x02014b50) throw new Error('Invalid ZIP central directory.');
-    const method = u16le(bytes,p+10), comp = u32le(bytes,p+20), size = u32le(bytes,p+24);
-    const nl = u16le(bytes,p+28), xl = u16le(bytes,p+30), cl = u16le(bytes,p+32), local = u32le(bytes,p+42);
-    const name = dec.decode(bytes.subarray(p+46,p+46+nl));
-    const lnl = u16le(bytes,local+26), lxl = u16le(bytes,local+28), start = local+30+lnl+lxl;
-    const packed = bytes.subarray(start,start+comp);
-    const data = method === 0 ? packed.slice() : method === 8 ? await inflateRaw(packed) : null;
-    if (!data || data.length !== size) throw new Error(`Unsupported ZIP compression for ${name}.`);
-    files.push({ name, data });
-    p += 46 + nl + xl + cl;
-  }
-  return files;
-}
-
 function createStoredZip(files) {
   const locals = [], centrals = []; let offset = 0;
   for (const f of files) {
@@ -275,8 +247,15 @@ const tag = (xml, name) => {
 };
 const removeTag = (xml, name) => xml.replace(new RegExp(`\\s*<(?:\\w+:)?${name}(?:\\s[^>]*)?>[\\s\\S]*?<\\/(?:\\w+:)?${name}>\\s*`,'gi'),'\n');
 
-async function ooxml(bytes, name) {
-  const files = await readZip(bytes), map = new Map(files.map(f=>[f.name,f]));
+async function ooxml(bytes, name, limits) {
+  // Inspection needs just Office properties, the workbook's sheet flags, and Word revisions.
+  // Embedded media, worksheet payloads, slides, etc. are never inflated during inspection.
+  const files = await readLimitedZipEntries(bytes, {
+    limits,
+    include: n => /^docProps\/(core|app|custom)\.xml$/.test(n) ||
+      n === 'xl/workbook.xml' || n === 'word/document.xml',
+  });
+  const map = new Map(files.map(f => [f.name, f]));
   const isWord = map.has('word/document.xml'), isExcel = map.has('xl/workbook.xml'), isPpt = map.has('ppt/presentation.xml');
   const format = isWord ? 'docx' : isExcel ? 'xlsx' : isPpt ? 'pptx' : 'ooxml';
   const fields = [], blocks = [];
@@ -315,8 +294,11 @@ async function ooxml(bytes, name) {
     }
   }
   const clean = async () => {
+    // Cleaning rebuilds the archive, so every entry is needed, but each is still
+    // stream-decompressed within the same hard per-entry/total/ratio bounds.
+    const allFiles = await readLimitedZipEntries(bytes, { limits });
     const cleaned = [];
-    for (const f of files) {
+    for (const f of allFiles) {
       let data = f.data;
       if (f.name === 'docProps/core.xml') {
         let x = dec.decode(data);
@@ -338,13 +320,13 @@ async function ooxml(bytes, name) {
   return { format, fields: fields.filter(Boolean), blocks, signals, clean };
 }
 
-export async function inspectMetadata(input, { name = '' } = {}) {
+export async function inspectMetadata(input, { name = '', limits } = {}) {
   const bytes = input instanceof Uint8Array ? input : new Uint8Array(input);
   let r;
   if (bytes[0] === 0xff && bytes[1] === 0xd8) r = jpeg(bytes);
   else if (latin.decode(bytes.subarray(1,4)) === 'PNG') r = png(bytes);
   else if (latin.decode(bytes.subarray(0,4)) === 'RIFF' && latin.decode(bytes.subarray(8,12)) === 'WEBP') r = webp(bytes);
-  else if (bytes[0] === 0x50 && bytes[1] === 0x4b) r = await ooxml(bytes,name);
+  else if (bytes[0] === 0x50 && bytes[1] === 0x4b) r = await ooxml(bytes,name,limits);
   else throw new Error('Metadata inspection is not supported for this file type.');
   return {
     format: r.format,
