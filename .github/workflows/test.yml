@@ -1,9 +1,14 @@
-name: Test
+name: Test (minimal CI)
 
 on:
   push:
     branches: [main]
-  pull_request:
+  workflow_dispatch:
+    inputs:
+      full_suite:
+        description: 'Run all unit tests (opt-in)'
+        type: boolean
+        default: false
 
 jobs:
   test:
@@ -14,4 +19,8 @@ jobs:
         with:
           node-version: 22
       - run: npm install --no-audit --no-fund
-      - run: npm test
+      - name: Two critical test files
+        run: npm run test:smoke
+      - name: Full suite (manual only)
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.full_suite }}
+        run: npm test

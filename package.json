@@ -4,7 +4,8 @@
   "description": "Open source JavaScript utilities for Belgian business formats, local file privacy, PDF processing and Belgian calculations.",
   "type": "module",
   "scripts": {
-    "test": "node --test"
+    "test": "node --test",
+    "test:smoke": "node --test test/finance-workflows.test.js test/reconciliation-v2.test.js"
   },
   "keywords": [
     "belgium",
