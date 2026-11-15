@@ -4,6 +4,12 @@ Open source JavaScript utilities behind gratistools.be, focused on Belgian busin
 
 This package contains the reusable local processing logic behind parts of [gratistools.be](https://gratistools.be/). The website itself, account features, analytics, deployment configuration and operational code are intentionally not part of this repository.
 
+```bash
+npm install belgian-utils
+```
+
+Node 20.10+ or any modern bundler; ES modules only. No network requests.
+
 
 ## EU-27 VAT number validation (JSVAT integration)
 
