@@ -1,6 +1,6 @@
 {
   "name": "belgian-utils",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "description": "Open source JavaScript utilities for Belgian business formats, local file privacy, PDF processing and Belgian calculations.",
   "homepage": "https://github.com/mhatipog/belgian-utils#readme",
   "repository": {
@@ -17,7 +17,6 @@
   },
   "files": [
     "src",
-    
     "README.md",
     "LICENSE"
   ],
