@@ -1,0 +1,45 @@
+name: Release to npm
+
+# Manual only. Uses npm trusted publishing (GitHub OIDC): no npm token is stored in this repo.
+# The first version must be published once by the package owner; after that, add this repository
+# and workflow file as the trusted publisher in the package settings on npmjs.com.
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to publish; must equal package.json'
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-npm
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: npm
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: 'https://registry.npmjs.org'
+      - name: Requested version matches package.json
+        env: { REQUESTED: "${{ inputs.version }}" }
+        run: test "$(node -p 'require("./package.json").version')" = "$REQUESTED"
+      - name: Version is not on npm yet
+        env: { REQUESTED: "${{ inputs.version }}" }
+        run: '! npm view "belgian-utils@$REQUESTED" version 2>/dev/null | grep -q .'
+      - run: npm install --no-audit --no-fund
+      - run: npm test
+      - run: npm run test:pack
+      - name: npm 11.5+ for trusted publishing
+        run: npm install -g npm@11
+      - run: npm publish --access public

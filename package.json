@@ -2,10 +2,34 @@
   "name": "belgian-utils",
   "version": "0.7.0",
   "description": "Open source JavaScript utilities for Belgian business formats, local file privacy, PDF processing and Belgian calculations.",
+  "homepage": "https://github.com/mhatipog/belgian-utils#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mhatipog/belgian-utils.git"
+  },
+  "bugs": {
+    "url": "https://github.com/mhatipog/belgian-utils/issues"
+  },
   "type": "module",
+  "exports": {
+    ".": "./src/index.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "src",
+    
+    "README.md",
+    "LICENSE"
+  ],
+  "sideEffects": false,
+  "engines": {
+    "node": ">=20.10"
+  },
   "scripts": {
     "test": "node --test",
-    "test:smoke": "node --test test/finance-workflows.test.js test/reconciliation-v2.test.js"
+    "test:smoke": "node --test test/finance-workflows.test.js test/reconciliation-v2.test.js",
+    "test:pack": "node scripts/pack-smoke.mjs",
+    "prepublishOnly": "npm test && npm run test:pack"
   },
   "keywords": [
     "belgium",
