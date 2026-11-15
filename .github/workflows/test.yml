@@ -3,6 +3,7 @@ name: Test (minimal CI)
 on:
   push:
     branches: [main]
+  pull_request:
   workflow_dispatch:
     inputs:
       full_suite:
@@ -10,9 +11,14 @@ on:
         type: boolean
         default: false
 
+concurrency:
+  group: test-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -21,6 +27,8 @@ jobs:
       - run: npm install --no-audit --no-fund
       - name: Two critical test files
         run: npm run test:smoke
+      - name: Package installs and works in an empty project
+        run: npm run test:pack
       - name: Full suite (manual only)
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.full_suite }}
         run: npm test
