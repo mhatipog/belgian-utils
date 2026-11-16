@@ -61,3 +61,27 @@ test('FAVV operator name search uses the separate Smiley establishment name only
  assert.equal(matchFavv(ops,f,'bakkerij').length,0,'No invented company-name coverage without Smiley data');
  assert.equal(matchFavv(ops,f,'Leuven').length,1,'Municipality search still works');
 });
+
+
+test('open-data row limit is independent of final newline and counts logical records',()=>{
+ for(const eol of ['\n','\r\n','\r']){
+  for(const suffix of ['',eol]){
+   assert.throws(()=>parseOpenData(['A;B','1;2','3;4'].join(eol)+suffix,{maxRows:1}),/permitted record count: 1/);
+   assert.equal(parseOpenData(['A;B','1;2'].join(eol)+suffix,{maxRows:1}).rows.length,1);
+  }
+ }
+ assert.equal(parseOpenData('A;B\n"line\nbreak";2\n\n',{maxRows:1}).rows.length,1);
+ assert.throws(()=>parseOpenData('A;B\n1;2',{maxRows:0}),/permitted record count: 0/);
+ for(const maxRows of [NaN,Infinity,-1,1.5,'1']){
+  assert.throws(()=>parseOpenData('A;B\n1;2',{maxRows}),RangeError);
+ }
+});
+
+test('statistical numeric parser rejects missing and non-decimal values without losing valid zero',()=>{
+ for(const value of ['€','€ €','0x10','0b10','0o10','Infinity','12a',':']){
+  assert.equal(numericValue(value),null,value);
+ }
+ for(const [value,expected] of [['0',0],['235.000',235000],['€ 1.234,56',1234.56],['-3,25',-3.25],['1e3',1000],['1.234.567,89',1234567.89]]){
+  assert.equal(numericValue(value),expected,value);
+ }
+});
