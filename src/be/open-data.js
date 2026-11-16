@@ -36,6 +36,7 @@ export function guessDelimiter(text) {
  * remainder of the 80MB FAVV operator CSV.
  */
 export function parseOpenData(text,{delimiter,maxRows=2000000}={}) {
+  if(!Number.isSafeInteger(maxRows)||maxRows<0)throw new RangeError('maxRows must be a non-negative safe integer.');
   const input=String(text??'').replace(/^\uFEFF/,'');
   const sep=delimiter||guessDelimiter(input);
   const rows=[];let row=[],cell='',quoted=false;
@@ -63,6 +64,7 @@ export function parseOpenData(text,{delimiter,maxRows=2000000}={}) {
     cell+=ch;
   }
   row.push(cell.trim());if(row.some(Boolean))rows.push(row);
+  if(rows.length>maxRows+1)throw new Error('Source exceeds permitted record count: '+maxRows);
   if(rows.length<2)throw new Error('No tabular records found in the official source.');
   const headers=rows.shift().map((h,i)=>h||'Column '+(i+1));
   if(headers.length<2)throw new Error('Unsupported column delimiter in official data.');
@@ -80,6 +82,8 @@ export function numericValue(value) {
     const pieces=s.split(last);
     s=pieces.length===2&&pieces[1].length!==3 ? pieces[0].replace(/[.,]/g,'')+'.'+pieces[1] : s.replace(/[.,]/g,'');
   }else if(s.includes(',')&&!s.includes('.'))s=s.replace(',','.');
+  // Number() accepts blank strings and non-decimal literals; neither is an observed statistic.
+  if(!/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?$/i.test(s))return null;
   const n=Number(s);return Number.isFinite(n)?n:null;
 }
 const HINTS = {
